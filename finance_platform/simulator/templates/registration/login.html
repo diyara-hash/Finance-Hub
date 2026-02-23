@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Giriş Yap — FinanceHub Pro{% endblock %}
+
+{% block content_noauth %}
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="text-center">
+            <div class="login-logo">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <h2 style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--text-primary);">FinanceHub Pro</h2>
+            <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px;">Hesabınıza giriş yapın</p>
+        </div>
+
+        {% if form.errors %}
+        <div
+            style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fh-danger);">
+            <i class="bi bi-exclamation-circle-fill"></i> Kullanıcı adı veya şifre hatalı.
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="fh-label">Kullanıcı Adı</label>
+                <div style="position:relative;">
+                    <i class="bi bi-person"
+                        style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="text" name="username" class="fh-input" style="padding-left:38px;"
+                        placeholder="Kullanıcı adınız" required autofocus>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="fh-label">Şifre</label>
+                <div style="position:relative;">
+                    <i class="bi bi-lock"
+                        style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="password" name="password" class="fh-input" style="padding-left:38px;"
+                        placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="fh-btn fh-btn-primary" style="width:100%;margin-top:8px;">
+                Giriş Yap <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </form>
+        <div class="text-center mt-4" style="font-size:14px;">
+            <span style="color:var(--text-muted);">Hesabınız yok mu?</span>
+            <a href="{% url 'signup' %}" style="font-weight:600;margin-left:4px;" class="text-gradient">Kayıt Olun</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

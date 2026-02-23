@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simülasyon Sonuçları</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: Arial;
+            padding: 40px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .positive {
+            color: #22c55e;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Simülasyon Sonuçları</h1>
+
+    {% for r in results %}
+    <div class="card">
+        <strong>Ay {{ r.month }}</strong><br>
+        Gider: {{ r.expense }}<br>
+        Net:
+        <span class="{% if r.net < 0 %}negative{% else %}positive{% endif %}">
+            {{ r.net }}
+        </span><br>
+        Bakiye: {{ r.balance }}
+    </div>
+    {% endfor %}
+
+</body>
+
+</html>

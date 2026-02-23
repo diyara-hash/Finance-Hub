@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block title %}İşlemler — FinanceHub Pro{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1>İşlemler</h1>
+        <p class="subtitle">Tüm gelir ve gider hareketleriniz</p>
+    </div>
+    <button class="fh-btn fh-btn-primary" data-modal="txModal">
+        <i class="bi bi-plus-lg"></i> Yeni İşlem
+    </button>
+</div>
+
+<!-- Stat Summary -->
+<div class="grid-3 mb-4">
+    <div class="fh-card d-flex align-center gap-3">
+        <div class="stat-icon" style="background:rgba(16,185,129,0.15);"><i class="bi bi-arrow-up-right"
+                style="color:var(--fh-success);font-size:18px;"></i></div>
+        <div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">Toplam Gelir</div>
+            <div style="font-size:20px;font-weight:700;color:var(--fh-success);">+{{ total_income }} ₺</div>
+        </div>
+    </div>
+    <div class="fh-card d-flex align-center gap-3">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.15);"><i class="bi bi-arrow-down-right"
+                style="color:var(--fh-danger);font-size:18px;"></i></div>
+        <div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">Toplam Gider</div>
+            <div style="font-size:20px;font-weight:700;color:var(--fh-danger);">-{{ total_expense }} ₺</div>
+        </div>
+    </div>
+    <div class="fh-card d-flex align-center gap-3">
+        <div class="stat-icon" style="background:rgba(99,102,241,0.15);"><i class="bi bi-receipt"
+                style="color:var(--fh-purple);font-size:18px;"></i></div>
+        <div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">Toplam İşlem</div>
+            <div style="font-size:20px;font-weight:700;">{{ transactions.paginator.count }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="fh-card mb-4">
+    <form method="GET" class="filter-bar">
+        <!-- Type filter -->
+        <a href="{% url 'transactions' %}" class="filter-chip {% if not current_type %}active{% endif %}">Tümü</a>
+        <a href="?type=income" class="filter-chip {% if current_type == 'income' %}active{% endif %}"><i
+                class="bi bi-arrow-up-right"></i> Gelir</a>
+        <a href="?type=expense" class="filter-chip {% if current_type == 'expense' %}active{% endif %}"><i
+                class="bi bi-arrow-down-right"></i> Gider</a>
+
+        <div style="width:1px;height:24px;background:var(--border-color);margin:0 4px;"></div>
+
+        <!-- Date presets -->
+        <a href="?preset=today{% if current_type %}&type={{ current_type }}{% endif %}"
+            class="filter-chip {% if current_preset == 'today' %}active{% endif %}">Bugün</a>
+        <a href="?preset=week{% if current_type %}&type={{ current_type }}{% endif %}"
+            class="filter-chip {% if current_preset == 'week' %}active{% endif %}">Bu Hafta</a>
+        <a href="?preset=month{% if current_type %}&type={{ current_type }}{% endif %}"
+            class="filter-chip {% if current_preset == 'month' %}active{% endif %}">Bu Ay</a>
+
+        <div style="flex:1;"></div>
+
+        <!-- Search -->
+        <div style="position:relative;">
+            <i class="bi bi-search"
+                style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;"></i>
+            <input type="text" name="search" value="{{ current_search }}" placeholder="Ara..." class="fh-input"
+                style="height:36px;padding-left:34px;width:200px;font-size:13px;">
+        </div>
+    </form>
+</div>
+
+<!-- Transaction Table -->
+<div class="fh-card">
+    {% if transactions %}
+    <div style="overflow-x:auto;">
+        <table class="fh-table">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Açıklama</th>
+                    <th>Kategori</th>
+                    <th>Hesap</th>
+                    <th style="text-align:right;">Tutar</th>
+                    <th>Durum</th>
+                    <th style="text-align:right;width:120px;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td style="white-space:nowrap;color:var(--text-muted);font-size:13px;">{{ t.date|date:"d M Y" }}
+                    </td>
+                    <td>
+                        <span style="font-weight:500;">{{ t.description|default:"—" }}</span>
+                    </td>
+                    <td>
+                        {% if t.category %}
+                        <span style="display:inline-flex;align-items:center;gap:6px;">
+                            <i class="bi {{ t.category.icon }}"
+                                style="color:{{ t.category.color }};font-size:14px;"></i>
+                            <span style="font-size:13px;">{{ t.category.name }}</span>
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td style="font-size:13px;color:var(--text-secondary);">{{ t.account.name|default:"—" }}</td>
+                    <td style="text-align:right;">
+                        <span class="fw-bold {% if t.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                            {% if t.type == 'income' %}+{% else %}-{% endif %}{{ t.amount }} ₺
+                        </span>
+                    </td>
+                    <td>
+                        {% if t.type == 'income' %}
+                        <span class="fh-badge income">Gelir</span>
+                        {% elif t.category.is_bill %}
+                        {% if t.is_paid %}
+                        <span class="fh-badge paid"><i class="bi bi-check-circle-fill"></i> Ödendi</span>
+                        {% elif t.is_overdue %}
+                        <span class="fh-badge overdue"><i class="bi bi-exclamation-circle-fill"></i> Gecikmiş</span>
+                        {% else %}
+                        <span class="fh-badge warning"><i class="bi bi-hourglass-split"></i> Ödenecek</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="fh-badge expense">Gider</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="d-flex justify-between gap-2" style="justify-content:flex-end;">
+                            {% if t.category.is_bill and not t.is_paid %}
+                            <form action="{% url 'mark_as_paid' t.pk %}" method="POST" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="fh-btn-icon success" title="Ödendi"><i
+                                        class="bi bi-check-lg"></i></button>
+                            </form>
+                            {% endif %}
+                            <a href="{% url 'edit_transaction' t.pk %}" class="fh-btn-icon" title="Düzenle"><i
+                                    class="bi bi-pencil"></i></a>
+                            <form action="{% url 'delete_transaction' t.pk %}" method="POST" style="margin:0;"
+                                onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
+                                {% csrf_token %}
+                                <button type="submit" class="fh-btn-icon danger" title="Sil"><i
+                                        class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if transactions.has_other_pages %}
+    <div class="fh-pagination">
+        {% if transactions.has_previous %}
+        <a
+            href="?page={{ transactions.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        {% endif %}
+        {% for num in transactions.paginator.page_range %}
+        {% if transactions.number == num %}
+        <span class="active">{{ num }}</span>
+        {% elif num > transactions.number|add:"-3" and num < transactions.number|add:"3" %} <a
+            href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+            {{ num }}</a>
+            {% endif %}
+            {% endfor %}
+            {% if transactions.has_next %}
+            <a
+                href="?page={{ transactions.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-receipt d-block"></i>
+        <p>Filtrelere uygun işlem bulunamadı.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- FAB -->
+<button class="fh-fab" data-modal="txModal" title="Yeni İşlem Ekle">
+    <i class="bi bi-plus-lg"></i>
+</button>
+
+<!-- Transaction Modal -->
+<div class="fh-modal-overlay" id="txModal">
+    <div class="fh-modal">
+        <div class="fh-modal-header">
+            <h3><i class="bi bi-plus-circle text-gradient"></i> Yeni İşlem</h3>
+            <button class="fh-btn-icon" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" action="{% url 'add_transaction' %}" id="txFormModal">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="transactions">
+            <div class="fh-modal-body">
+                <div class="form-group">
+                    <label class="fh-label">Tür</label>
+                    {{ form.type }}
+                </div>
+                <div class="form-group" id="categoryField" style="display:none;">
+                    <label class="fh-label">Kategori</label>
+                    {{ form.category }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Hesap</label>
+                    {{ form.account }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Tutar (₺)</label>
+                    {{ form.amount }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Açıklama</label>
+                    {{ form.description }}
+                </div>
+                <div class="form-group" id="dueDateField" style="display:none;">
+                    <label class="fh-label">Son Ödeme Tarihi</label>
+                    {{ form.due_date }}
+                </div>
+                <div class="form-group" id="isPaidField" style="display:none;">
+                    <label class="fh-label" style="display:inline;">Ödendi mi?</label>
+                    {{ form.is_paid }}
+                </div>
+            </div>
+            <div class="fh-modal-footer">
+                <button type="button" class="fh-btn fh-btn-secondary" data-modal-close>İptal</button>
+                <button type="submit" class="fh-btn fh-btn-primary"><i class="bi bi-check-lg"></i> Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const billIds = '{{ bill_category_ids|join:"," }}'.split(',').filter(Boolean).map(Number);
+    initTransactionForm('txFormModal', billIds);
+</script>
+{% endblock %}

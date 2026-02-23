@@ -1,0 +1,444 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — FinanceHub Pro{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p class="subtitle">Finansal durumunuzun genel görünümü</p>
+    </div>
+    <button class="fh-btn fh-btn-primary" data-modal="txModal">
+        <i class="bi bi-plus-lg"></i> Yeni İşlem
+    </button>
+</div>
+
+<!-- ===== STAT CARDS ===== -->
+<div class="grid-3 mb-4">
+    <!-- Gelir -->
+    <div class="stat-card income animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-arrow-up-right" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Toplam Gelir</div>
+        <div class="stat-value" data-countup="{{ total_income }}" data-suffix=" ₺" data-decimals="2"
+            data-duration="1200">0 ₺</div>
+        <div class="stat-sub" style="color:rgba(255,255,255,0.7);">
+            <span>Bu ay: {{ month_income }} ₺</span>
+        </div>
+    </div>
+    <!-- Gider -->
+    <div class="stat-card expense animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-arrow-down-right" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Toplam Gider</div>
+        <div class="stat-value" data-countup="{{ total_expense }}" data-suffix=" ₺" data-decimals="2"
+            data-duration="1200">0 ₺</div>
+        <div class="stat-sub" style="color:rgba(255,255,255,0.7);">
+            {% if expense_trend > 0 %}
+            <span class="trend-down"><i class="bi bi-arrow-up-short"></i> %{{ expense_trend }} artış</span>
+            {% elif expense_trend < 0 %} <span class="trend-up"><i class="bi bi-arrow-down-short"></i> %{{
+                expense_trend|cut:"-" }} azalış</span>
+                {% else %}
+                <span>Bu ay: {{ month_expense }} ₺</span>
+                {% endif %}
+        </div>
+    </div>
+    <!-- Bakiye -->
+    <div class="stat-card balance animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-wallet2" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Net Bakiye</div>
+        <div class="stat-value" data-countup="{{ balance }}" data-suffix=" ₺" data-decimals="2" data-duration="1500">0 ₺
+        </div>
+        <div class="stat-sub" style="color:rgba(255,255,255,0.7);">
+            {% if total_unpaid_bills %}
+            <i class="bi bi-hourglass-split"></i> Ödenmemiş: {{ total_unpaid_bills }} ₺
+            {% else %}
+            Gelir − Gider
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ===== BILL ALERTS ===== -->
+{% if overdue_bills or upcoming_bills %}
+<div class="grid-2 mb-4">
+    {% if overdue_bills %}
+    <div class="alert-card danger animate-in">
+        <div class="alert-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+        <div>
+            <div
+                style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">
+                Gecikmiş Fatura</div>
+            <div style="font-size:20px;font-weight:700;color:var(--fh-danger);">{{ overdue_bills.count }} Adet</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if upcoming_bills %}
+    <div class="alert-card warning animate-in">
+        <div class="alert-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div
+                style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">
+                Yaklaşan (3 Gün)</div>
+            <div style="font-size:20px;font-weight:700;color:var(--fh-warning);">{{ upcoming_bills.count }} Adet</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ===== CHARTS ROW ===== -->
+<div class="grid-2 mb-4">
+    <!-- Aylık Gelir/Gider Area Chart -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Aylık Gelir / Gider</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+    <!-- Kategori Doughnut -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Harcama Dağılımı (Bu Ay)</span>
+        </div>
+        <div class="chart-container" style="max-height:260px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ACCOUNTS & MINI CHART ===== -->
+<div class="grid-2 mb-4">
+    <!-- Hesaplar -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Hesaplarım</span>
+            <a href="{% url 'settings' %}" class="fh-btn fh-btn-ghost fh-btn-sm"><i class="bi bi-plus-lg"></i> Ekle</a>
+        </div>
+        {% if accounts %}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            {% for acc in accounts %}
+            <div class="account-card">
+                <div class="acc-icon" style="background:{{ acc.color }};">
+                    <i class="bi {{ acc.icon }}" style="color:#fff;"></i>
+                </div>
+                <div class="acc-info">
+                    <div class="acc-name">{{ acc.name }}</div>
+                    <div class="acc-type">{{ acc.get_account_type_display }}</div>
+                </div>
+                <div class="acc-balance">{{ acc.balance }} ₺</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-wallet2 d-block"></i>
+            <p>Henüz hesap eklenmemiş.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 7-Gün Mini Chart -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Son 7 Gün Nakit Akışı</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ===== BUDGETS & RECENT TRANSACTIONS ===== -->
+<div class="grid-2 mb-4">
+    <!-- Bütçe Takibi -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Bütçe Durumu</span>
+            <a href="{% url 'budgets' %}" class="fh-btn fh-btn-ghost fh-btn-sm">Tümünü Gör</a>
+        </div>
+        {% if budgets %}
+        {% for b in budgets %}
+        <div class="budget-item">
+            <div class="budget-header">
+                <div class="budget-cat">
+                    <i class="bi {{ b.category.icon }}" style="color:{{ b.category.color }};"></i>
+                    {{ b.category.name }}
+                </div>
+                <div class="budget-amounts">
+                    {{ b.spent }} / {{ b.amount }} ₺
+                </div>
+            </div>
+            <div class="fh-progress">
+                <div class="fh-progress-bar {% if b.is_over_budget %}danger{% elif b.is_warning %}warning{% endif %}"
+                    style="width:{{ b.percent_used }}%;"></div>
+            </div>
+            {% if b.is_over_budget %}
+            <div style="font-size:11px;color:var(--fh-danger);margin-top:4px;font-weight:600;">
+                <i class="bi bi-exclamation-triangle-fill"></i> Bütçe aşıldı!
+            </div>
+            {% elif b.is_warning %}
+            <div style="font-size:11px;color:var(--fh-warning);margin-top:4px;font-weight:600;">
+                <i class="bi bi-exclamation-circle"></i> %80 eşiği aşıldı
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-piggy-bank d-block"></i>
+            <p>Bu ay için bütçe belirlenmemiş.</p>
+            <a href="{% url 'budgets' %}" class="fh-btn fh-btn-primary fh-btn-sm mt-2">Bütçe Oluştur</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Son İşlemler -->
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Son İşlemler</span>
+            <a href="{% url 'transactions' %}" class="fh-btn fh-btn-ghost fh-btn-sm">Tümünü Gör</a>
+        </div>
+        {% if recent_transactions %}
+        <ul class="tx-list">
+            {% for t in recent_transactions %}
+            <li class="tx-item">
+                <div class="tx-icon"
+                    style="background:{% if t.category %}{{ t.category.color }}20{% else %}var(--bg-input){% endif %};">
+                    <i class="bi {% if t.category %}{{ t.category.icon }}{% else %}bi-tag{% endif %}"
+                        style="color:{% if t.category %}{{ t.category.color }}{% else %}var(--text-muted){% endif %};"></i>
+                </div>
+                <div class="tx-info">
+                    <div class="tx-desc">{{ t.description|default:"—" }}</div>
+                    <div class="tx-category">
+                        {% if t.category %}{{ t.category.name }}{% else %}—{% endif %}
+                        {% if t.category.is_bill %}
+                        {% if t.is_paid %}
+                        · <span class="fh-badge paid" style="font-size:9px;padding:2px 6px;">Ödendi</span>
+                        {% elif t.is_overdue %}
+                        · <span class="fh-badge overdue" style="font-size:9px;padding:2px 6px;">Gecikmiş</span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="tx-date">{{ t.date|date:"d M" }}</div>
+                <div class="tx-amount {% if t.type == 'income' %}income{% else %}expense{% endif %}">
+                    {% if t.type == 'income' %}+{% else %}-{% endif %}{{ t.amount }} ₺
+                </div>
+                <div class="tx-actions">
+                    <a href="{% url 'edit_transaction' t.pk %}" class="fh-btn-icon" title="Düzenle"><i
+                            class="bi bi-pencil"></i></a>
+                    <form action="{% url 'delete_transaction' t.pk %}" method="POST" style="margin:0;"
+                        onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
+                        {% csrf_token %}
+                        <button type="submit" class="fh-btn-icon danger" title="Sil"><i
+                                class="bi bi-trash"></i></button>
+                    </form>
+                    {% if t.category.is_bill and not t.is_paid %}
+                    <form action="{% url 'mark_as_paid' t.pk %}" method="POST" style="margin:0;">
+                        {% csrf_token %}
+                        <button type="submit" class="fh-btn-icon success" title="Ödendi"><i
+                                class="bi bi-check-lg"></i></button>
+                    </form>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-receipt d-block"></i>
+            <p>Henüz işlem kaydı yok.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== FAB ===== -->
+<button class="fh-fab" data-modal="txModal" title="Yeni İşlem Ekle">
+    <i class="bi bi-plus-lg"></i>
+</button>
+
+<!-- ===== TRANSACTION MODAL ===== -->
+<div class="fh-modal-overlay" id="txModal">
+    <div class="fh-modal">
+        <div class="fh-modal-header">
+            <h3><i class="bi bi-plus-circle text-gradient"></i> Yeni İşlem</h3>
+            <button class="fh-btn-icon" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" action="{% url 'dashboard' %}" id="txFormModal"
+            data-bill-ids="{{ bill_category_ids|join:',' }}">
+            {% csrf_token %}
+            <div class="fh-modal-body">
+                <div class="form-group">
+                    <label class="fh-label">Tür</label>
+                    {{ form.type }}
+                </div>
+                <div class="form-group" id="categoryField" style="display:none;">
+                    <label class="fh-label">Kategori</label>
+                    {{ form.category }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Hesap</label>
+                    {{ form.account }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Tutar (₺)</label>
+                    {{ form.amount }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Açıklama</label>
+                    {{ form.description }}
+                </div>
+                <div class="form-group" id="dueDateField" style="display:none;">
+                    <label class="fh-label">Son Ödeme Tarihi</label>
+                    {{ form.due_date }}
+                </div>
+                <div class="form-group" id="isPaidField" style="display:none;">
+                    <label class="fh-label" style="display:inline;">Ödendi mi?</label>
+                    {{ form.is_paid }}
+                </div>
+            </div>
+            <div class="fh-modal-footer">
+                <button type="button" class="fh-btn fh-btn-secondary" data-modal-close>İptal</button>
+                <button type="submit" class="fh-btn fh-btn-primary"><i class="bi bi-check-lg"></i> Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize transaction form field toggles
+    const billIds = '{{ bill_category_ids|join:"," }}'.split(',').filter(Boolean).map(Number);
+    initTransactionForm('txFormModal', billIds);
+
+    // ===== MONTHLY AREA CHART =====
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx) {
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: {{ monthly_labels| safe }},
+    datasets: [
+        {
+            label: 'Gelir',
+            data: {{ monthly_income_data| safe }},
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#10b981',
+                    },
+        {
+            label: 'Gider',
+            data: {{ monthly_expense_data| safe }},
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#ef4444',
+                    }
+    ]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                position: 'top',
+                    labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'), boxWidth: 12, padding: 16, font: { family: 'Inter' } }
+            }
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } },
+            y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-color') }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } }
+        }
+    }
+        });
+    }
+
+    // ===== CATEGORY DOUGHNUT =====
+    const catCtx = document.getElementById('categoryChart');
+    if (catCtx) {
+        const catLabels = {{ category_labels| safe
+    }};
+    const catAmounts = {{ category_amounts| safe }};
+    const catColors = {{ category_colors| safe }};
+
+    if (catLabels.length > 0) {
+        new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catAmounts,
+                    backgroundColor: catColors,
+                    borderWidth: 0,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'), boxWidth: 10, padding: 12, font: { family: 'Inter', size: 12 } }
+                    }
+                }
+            }
+        });
+    } else {
+        catCtx.parentElement.innerHTML = '<div class="empty-state"><i class="bi bi-pie-chart d-block"></i><p>Bu ay henüz gider yok.</p></div>';
+    }
+    }
+
+    // ===== WEEKLY BAR CHART =====
+    const weekCtx = document.getElementById('weeklyChart');
+    if (weekCtx) {
+        new Chart(weekCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ daily_labels| safe }},
+    datasets: [
+        {
+            label: 'Gelir',
+            data: {{ daily_income_data| safe }},
+        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+        borderRadius: 6,
+        barPercentage: 0.5,
+                    },
+        {
+            label: 'Gider',
+            data: {{ daily_expense_data| safe }},
+        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+        borderRadius: 6,
+        barPercentage: 0.5,
+                    }
+    ]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                position: 'top',
+                    labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'), boxWidth: 10, padding: 12, font: { family: 'Inter', size: 11 } }
+            }
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } },
+            y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-color') }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } }
+        }
+    }
+        });
+    }
+</script>
+{% endblock %}

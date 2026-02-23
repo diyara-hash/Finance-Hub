@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Bütçe Yönetimi — FinanceHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Bütçe Yönetimi</h1>
+        <p class="subtitle">{{ today|date:"F Y" }} — Kategori bazlı bütçe takibi</p>
+    </div>
+    <button class="fh-btn fh-btn-primary" data-modal="budgetModal">
+        <i class="bi bi-plus-lg"></i> Bütçe Ekle
+    </button>
+</div>
+
+<!-- Summary -->
+<div class="grid-3 mb-4">
+    <div class="stat-card balance animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-piggy-bank-fill" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Toplam Bütçe</div>
+        <div class="stat-value">{{ total_budget }} ₺</div>
+    </div>
+    <div class="stat-card expense animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-receipt" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Harcanan</div>
+        <div class="stat-value">{{ total_spent }} ₺</div>
+    </div>
+    <div class="stat-card income animate-in" style="color:#fff;">
+        <div class="stat-icon"><i class="bi bi-shield-check" style="color:#fff;"></i></div>
+        <div class="stat-label" style="color:rgba(255,255,255,0.8);">Kalan</div>
+        <div class="stat-value">{% widthratio total_spent 1 1 as spent_int %}{% widthratio total_budget 1 1 as
+            budget_int %}{{ total_budget|floatformat:2 }} ₺</div>
+    </div>
+</div>
+
+<!-- Budget List -->
+<div class="fh-card">
+    <div class="card-header-custom">
+        <span class="card-title">Kategori Bütçeleri</span>
+    </div>
+
+    {% if budgets %}
+    {% for b in budgets %}
+    <div class="budget-item animate-in">
+        <div class="budget-header">
+            <div class="budget-cat">
+                <span
+                    style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:{{ b.category.color }}20;">
+                    <i class="bi {{ b.category.icon }}" style="color:{{ b.category.color }};"></i>
+                </span>
+                {{ b.category.name }}
+            </div>
+            <div class="d-flex align-center gap-3">
+                <div class="budget-amounts">
+                    <span style="font-weight:700;{% if b.is_over_budget %}color:var(--fh-danger);{% endif %}">{{ b.spent
+                        }}</span>
+                    / {{ b.amount }} ₺
+                </div>
+                <form action="{% url 'delete_budget' b.pk %}" method="POST" style="margin:0;"
+                    onsubmit="return confirm('Bütçeyi silmek istediğinize emin misiniz?');">
+                    {% csrf_token %}
+                    <button type="submit" class="fh-btn-icon danger fh-btn-sm" title="Sil"><i
+                            class="bi bi-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        <div class="fh-progress" style="margin-top:8px;">
+            <div class="fh-progress-bar {% if b.is_over_budget %}danger{% elif b.is_warning %}warning{% endif %}"
+                style="width:{{ b.percent_used }}%;"></div>
+        </div>
+        <div class="d-flex justify-between mt-1">
+            <span style="font-size:11px;color:var(--text-muted);">%{{ b.percent_used }} kullanıldı</span>
+            {% if b.is_over_budget %}
+            <span style="font-size:11px;color:var(--fh-danger);font-weight:600;">
+                <i class="bi bi-exclamation-triangle-fill"></i> Bütçe aşıldı!
+            </span>
+            {% elif b.is_warning %}
+            <span style="font-size:11px;color:var(--fh-warning);font-weight:600;">
+                <i class="bi bi-exclamation-circle"></i> Uyarı: %80 eşiği
+            </span>
+            {% else %}
+            <span style="font-size:11px;color:var(--fh-success);">Kalan: {{ b.remaining }} ₺</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-piggy-bank d-block"></i>
+        <p>Bu ay için henüz bütçe belirlenmemiş.</p>
+        <button class="fh-btn fh-btn-primary fh-btn-sm mt-3" data-modal="budgetModal">
+            <i class="bi bi-plus-lg"></i> İlk Bütçeni Oluştur
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Budget Add Modal -->
+<div class="fh-modal-overlay" id="budgetModal">
+    <div class="fh-modal">
+        <div class="fh-modal-header">
+            <h3><i class="bi bi-piggy-bank text-gradient"></i> Yeni Bütçe</h3>
+            <button class="fh-btn-icon" data-modal-close><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" action="{% url 'budgets' %}">
+            {% csrf_token %}
+            <div class="fh-modal-body">
+                <div class="form-group">
+                    <label class="fh-label">Kategori</label>
+                    {{ form.category }}
+                </div>
+                <div class="form-group">
+                    <label class="fh-label">Bütçe Limiti (₺)</label>
+                    {{ form.amount }}
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="fh-label">Ay</label>
+                        {{ form.month }}
+                    </div>
+                    <div class="form-group">
+                        <label class="fh-label">Yıl</label>
+                        {{ form.year }}
+                    </div>
+                </div>
+            </div>
+            <div class="fh-modal-footer">
+                <button type="button" class="fh-btn fh-btn-secondary" data-modal-close>İptal</button>
+                <button type="submit" class="fh-btn fh-btn-primary"><i class="bi bi-check-lg"></i> Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

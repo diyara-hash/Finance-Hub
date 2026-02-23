@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Kayıt Ol — FinanceHub Pro{% endblock %}
+
+{% block content_noauth %}
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="text-center">
+            <div class="login-logo">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <h2 style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--text-primary);">Hesap Oluştur</h2>
+            <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px;">FinanceHub Pro'ya katılın</p>
+        </div>
+
+        {% if form.errors %}
+        <div
+            style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--fh-danger);">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            {% for field in form %}
+            {% for error in field.errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="fh-label">Kullanıcı Adı</label>
+                <div style="position:relative;">
+                    <i class="bi bi-person"
+                        style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="text" name="username" class="fh-input" style="padding-left:38px;"
+                        placeholder="Kullanıcı adınız" value="{{ form.username.value|default:'' }}" required autofocus>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="fh-label">Şifre</label>
+                <div style="position:relative;">
+                    <i class="bi bi-lock"
+                        style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="password" name="password1" class="fh-input" style="padding-left:38px;"
+                        placeholder="••••••••" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="fh-label">Şifre Tekrar</label>
+                <div style="position:relative;">
+                    <i class="bi bi-shield-lock"
+                        style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="password" name="password2" class="fh-input" style="padding-left:38px;"
+                        placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="fh-btn fh-btn-primary" style="width:100%;margin-top:8px;">
+                Kayıt Ol <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </form>
+        <div class="text-center mt-4" style="font-size:14px;">
+            <span style="color:var(--text-muted);">Zaten hesabınız var mı?</span>
+            <a href="{% url 'login' %}" style="font-weight:600;margin-left:4px;" class="text-gradient">Giriş Yapın</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

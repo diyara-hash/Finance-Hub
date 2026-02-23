@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Raporlar — FinanceHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Raporlar & Analiz</h1>
+        <p class="subtitle">Finansal verilerinizin detaylı analizi</p>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid-3 mb-4">
+    <div class="fh-card animate-in">
+        <div class="card-title mb-2">Bu Ay Gider</div>
+        <div style="font-size:28px;font-weight:700;color:var(--fh-danger);">{{ this_month_exp }} ₺</div>
+    </div>
+    <div class="fh-card animate-in">
+        <div class="card-title mb-2">Geçen Ay Gider</div>
+        <div style="font-size:28px;font-weight:700;color:var(--text-secondary);">{{ last_month_exp }} ₺</div>
+    </div>
+    <div class="fh-card animate-in">
+        <div class="card-title mb-2">Değişim</div>
+        {% if this_month_exp > last_month_exp %}
+        <div style="font-size:28px;font-weight:700;color:var(--fh-danger);">
+            <i class="bi bi-arrow-up-short"></i> Artış
+        </div>
+        {% elif this_month_exp < last_month_exp %} <div style="font-size:28px;font-weight:700;color:var(--fh-success);">
+            <i class="bi bi-arrow-down-short"></i> Azalış
+    </div>
+    {% else %}
+    <div style="font-size:28px;font-weight:700;color:var(--text-muted);">— Aynı</div>
+    {% endif %}
+</div>
+</div>
+
+<!-- Monthly Trend Chart -->
+<div class="fh-card mb-4 animate-in">
+    <div class="card-header-custom">
+        <span class="card-title">12 Aylık Gelir / Gider Trendi</span>
+    </div>
+    <div class="chart-container" style="height:350px;">
+        <canvas id="trendChart"></canvas>
+    </div>
+</div>
+
+<!-- Category Analysis -->
+<div class="grid-2 mb-4">
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Kategori Dağılımı</span>
+        </div>
+        <div class="chart-container" style="height:300px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="catPieChart"></canvas>
+        </div>
+    </div>
+
+    <div class="fh-card animate-in">
+        <div class="card-header-custom">
+            <span class="card-title">Kategori Detayları</span>
+        </div>
+        {% if cat_analysis %}
+        <div style="max-height:300px;overflow-y:auto;">
+            {% for c in cat_analysis %}
+            <div class="d-flex align-center justify-between gap-2"
+                style="padding:10px 0;border-bottom:1px solid var(--border-color);">
+                <div class="d-flex align-center gap-2">
+                    <i class="bi {{ c.category__icon|default:'bi-tag' }}"
+                        style="color:{{ c.category__color|default:'#64748b' }};font-size:16px;"></i>
+                    <div>
+                        <div style="font-size:14px;font-weight:600;">{{ c.category__name|default:"Diğer" }}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">{{ c.count }} işlem</div>
+                    </div>
+                </div>
+                <div style="font-size:15px;font-weight:700;color:var(--fh-danger);">{{ c.total }} ₺</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>Henüz gider verisi yok.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 12-month trend
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: {{ monthly_labels| safe }},
+    datasets: [
+        {
+            label: 'Gelir',
+            data: {{ monthly_income| safe }},
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.08)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#10b981',
+                    },
+        {
+            label: 'Gider',
+            data: {{ monthly_expense| safe }},
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#ef4444',
+                    }
+    ]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: { position: 'top', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'), boxWidth: 12, font: { family: 'Inter' } } }
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } },
+            y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-color') }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { family: 'Inter', size: 11 } } }
+        }
+    }
+        });
+    }
+
+    // Category pie
+    const cpCtx = document.getElementById('catPieChart');
+    if (cpCtx) {
+        const labels = {{ cat_labels| safe
+    }};
+    const amounts = {{ cat_amounts| safe }};
+    const colors = {{ cat_colors| safe }};
+    if (labels.length > 0) {
+        new Chart(cpCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: amounts, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'), boxWidth: 10, padding: 10, font: { family: 'Inter', size: 11 } } }
+                }
+            }
+        });
+    } else {
+        cpCtx.parentElement.innerHTML = '<div class="empty-state"><p>Veri yok.</p></div>';
+    }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Finansal Simülasyon</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Finansal Gelecek Simülasyonu</h1>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <input type="number" name="income" placeholder="Aylık Gelir" required>
+            <input type="number" name="expense" placeholder="Aylık Gider" required>
+            <input type="number" name="savings" placeholder="Mevcut Birikim" required>
+            <input type="number" name="months" placeholder="Kaç Ay (1-12)" min="1" max="12" required>
+
+            <button type="submit">Simülasyonu Başlat</button>
+        </form>
+    </div>
+
+</body>
+
+</html>
